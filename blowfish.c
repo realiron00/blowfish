@@ -292,62 +292,62 @@ static unsigned long F(BLOWFISH_CTX *ctx, unsigned long x) {
 
 
 void Blowfish_Encrypt(BLOWFISH_CTX *ctx, unsigned long *xl, unsigned long *xr){
-  unsigned long  Xl;
-  unsigned long  Xr;
+  unsigned long  left;
+  unsigned long  right;
   unsigned long  temp;
   short       i;
 
-  Xl = *xl;
-  Xr = *xr;
+  left = *xl;
+  right = *xr;
 
   for (i = 0; i < N; ++i) {
-    Xl = Xl ^ ctx->P[i];
-    Xr = F(ctx, Xl) ^ Xr;
+    left = left ^ ctx->P[i];
+    right = F(ctx, left) ^ right;
 
-    temp = Xl;
-    Xl = Xr;
-    Xr = temp;
+    temp = left;
+    left = right;
+    right = temp;
   }
 
-  temp = Xl;
-  Xl = Xr;
-  Xr = temp;
+  temp = left;
+  left = right;
+  right = temp;
 
-  Xr = Xr ^ ctx->P[N];
-  Xl = Xl ^ ctx->P[N + 1];
+  right = right ^ ctx->P[N];
+  left = left ^ ctx->P[N + 1];
 
-  *xl = Xl;
-  *xr = Xr;
+  *xl = left;
+  *xr = right;
 }
 
 
 void Blowfish_Decrypt(BLOWFISH_CTX *ctx, unsigned long *xl, unsigned long *xr){
-  unsigned long  Xl;
-  unsigned long  Xr;
+  unsigned long  left;
+  unsigned long  right;
   unsigned long  temp;
   short       i;
 
-  Xl = *xl;
-  Xr = *xr;
+  left = *xl;
+  right = *xr;
 
   for (i = N + 1; i > 1; --i) {
-    Xl = Xl ^ ctx->P[i];
-    Xr = F(ctx, Xl) ^ Xr;
+    left = left ^ ctx->P[i];
+    right = F(ctx, left) ^ right;
 
-    temp = Xl;
-    Xl = Xr;
-    Xr = temp;
+    temp = left;
+    left = right;
+    right = temp;
   }
 
-  temp = Xl;
-  Xl = Xr;
-  Xr = temp;
+  temp = left;
+  left = right;
+  right = temp;
 
-  Xr = Xr ^ ctx->P[1];
-  Xl = Xl ^ ctx->P[0];
+  right = right ^ ctx->P[1];
+  left = left ^ ctx->P[0];
 
-  *xl = Xl;
-  *xr = Xr;
+  *xl = left;
+  *xr = right;
 }
 
 
@@ -394,7 +394,8 @@ void Blowfish_Init(BLOWFISH_CTX *ctx, unsigned char *key, int keyLen) {
 
 #define RN               16
 
-static const unsigned long o_p[16 + 2] = {
+static const unsigned long o_p[16 + 2] = 
+{
         0x243F6A88L, 0x85A308D3L, 0x13198A2EL, 0x03707344L,
         0xA4093822L, 0x299F31D0L, 0x082EFA98L, 0xEC4E6C89L,
         0x452821E6L, 0x38D01377L, 0xBE5466CFL, 0x34E90C6CL,
@@ -402,7 +403,8 @@ static const unsigned long o_p[16 + 2] = {
         0x9216D5D9L, 0x8979FB1BL
 };
 
-static const unsigned long o_s[4][256] = {
+static const unsigned long o_s[4][256] = 
+{
     {   0xD1310BA6L, 0x98DFB5ACL, 0x2FFD72DBL, 0xD01ADFB7L,
         0xB8E1AFEDL, 0x6A267E96L, 0xBA7C9045L, 0xF12C7F99L,
         0x24A19947L, 0xB3916CF7L, 0x0801F2E2L, 0x858EFC16L,
@@ -662,7 +664,8 @@ static const unsigned long o_s[4][256] = {
 };
 
 // Blowfish F function
-static unsigned long BF_F(BF *ctx, unsigned long x) {
+static unsigned long BF_F(BF *ctx, unsigned long x) 
+{
    unsigned short s1, s2, s3, s4;
    unsigned long  y;
 
@@ -684,31 +687,81 @@ static unsigned long BF_F(BF *ctx, unsigned long x) {
 }
 
 // Blowfish 암호화 함수
-void Blowfish_Enc(BF *ctx, unsigned long *xl, unsigned long *xr){
-  unsigned long  Xl;
-  unsigned long  Xr;
-  unsigned long  temp;
-  short       i;
+void Blowfish_Enc(BF *ctx, unsigned long *x_l, unsigned long *x_r)
+{
+    unsigned long  left; //left 32-bit
+    unsigned long  right; //right 32-bit
+    unsigned long  temp;
+    
+    left = *x_l; //left에 x_l 저장
+    right = *x_r; //right에 x_r 저장
+    
+    for (int i = 0; i < RN; ++i) {
+        //step 1: left와 P-array의 i번째 구성요소를 XOR 연산
+        left = left ^ ctx->P[i];
+        
+        //step 2: step 1의 결과를 Blowfish F 함수에 넣어서 결과를 구함
+        //step 3: step 2의 결과와 right를 XOR 연산
+        right = BF_F(ctx, left) ^ right;
+        
+        //step 4: left와 right를 서로 바꿈
+        temp = left;
+        left = right;
+        right = temp;
+    } //step 5: step 4를 RN번(16번) 반복
+    
+    //step 6: left와 right를 서로 바꿈
+    temp = left;
+    left = right;
+    right = temp;
+    
+    //step 7: 우측 연산 값을 P 17번째 원소와 XOR 연산하고 우측에 저장
+    right = right ^ ctx->P[RN];
+    
+    //step 8: 좌측 연산 값을 P 18번째 원소와 XOR 연산하고 좌측에 저장
+    left = left ^ ctx->P[RN + 1];
+    
+    //left와 right를 x_l과 x_r에 저장
+    *x_l = left;
+    *x_r = right;
+}
 
-  Xl = *xl;
-  Xr = *xr;
-
-  for (i = 0; i < RN; ++i) {
-    Xl = Xl ^ ctx->P[i];
-    Xr = BF_F(ctx, Xl) ^ Xr;
-
-    temp = Xl;
-    Xl = Xr;
-    Xr = temp;
-  }
-
-  temp = Xl;
-  Xl = Xr;
-  Xr = temp;
-
-  Xr = Xr ^ ctx->P[RN];
-  Xl = Xl ^ ctx->P[RN + 1];
-
-  *xl = Xl;
-  *xr = Xr;
+// Blowfish 복호화 함수
+void Blowfish_Dec(BF *ctx, unsigned long *x_l, unsigned long *x_r)
+{
+    unsigned long  left; //left 32-bit
+    unsigned long  right; //right 32-bit
+    unsigned long  temp;
+    
+    left = *x_l; //left에 x_l 저장
+    right = *x_r; //right에 x_r 저장
+    
+    for (int i = RN + 1; i > 1; --i) {
+        //step 1: left와 P-array의 i번째 구성요소를 XOR 연산
+        left = left ^ ctx->P[i];
+        
+        //step 2: step 1의 결과를 Blowfish F 함수에 넣어서 결과를 구함
+        //step 3: step 2의 결과와 right를 XOR 연산
+        right = BF_F(ctx, left) ^ right;
+        
+        //step 4: left와 right를 서로 바꿈
+        temp = left;
+        left = right;
+        right = temp;
+    } //step 5: step 4를 RN번(16번) 반복
+    
+    //step 6: left와 right를 서로 바꿈
+    temp = left;
+    left = right;
+    right = temp;
+    
+    //step 7: 우측 연산 값을 P 17번째 원소와 XOR 연산하고 우측에 저장
+    right = right ^ ctx->P[1];
+    
+    //step 8: 좌측 연산 값을 P 18번째 원소와 XOR 연산하고 좌측에 저장
+    left = left ^ ctx->P[0];
+    
+    //left와 right를 x_l과 x_r에 저장
+    *x_l = left;
+    *x_r = right;
 }
