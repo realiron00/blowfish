@@ -765,3 +765,42 @@ void Blowfish_Dec(BF *ctx, unsigned long *x_l, unsigned long *x_r)
     *x_l = left;
     *x_r = right;
 }
+
+// Blowfish 초기화 함수
+void Blowfish_Init(BF *ctx, unsigned char *key, int keyLen) {
+    int i, j, k;
+    unsigned long data, datal, datar;
+    
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < 256; j++)
+        ctx->S[i][j] = o_s[i][j];
+    }
+    
+    j = 0;
+    for (i = 0; i < RN + 2; ++i) {
+        data = 0x00000000;
+        for (k = 0; k < 4; ++k) {
+            data = (data << 8) | key[j];
+            j = j + 1;
+            if (j >= keyLen) j = 0;
+        }
+        ctx->P[i] = o_p[i] ^ data;
+    }
+    
+    datal = 0x00000000;
+    datar = 0x00000000;
+    
+    for (i = 0; i < RN + 2; i += 2) {
+        Blowfish_Enc(ctx, &datal, &datar);
+        ctx->P[i] = datal;
+        ctx->P[i + 1] = datar;
+    }
+    
+    for (i = 0; i < 4; ++i) {
+        for (j = 0; j < 256; j += 2) {
+            Blowfish_Enc(ctx, &datal, &datar);
+            ctx->S[i][j] = datal;
+            ctx->S[i][j + 1] = datar;
+        }
+    }
+}
