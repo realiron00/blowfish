@@ -1,7 +1,7 @@
 //Blowfish.h
 
 typedef struct {
-  unsigned long P[16 + 2]; //초기화 및 라운드키 저장
+  unsigned long P[16 + 2]; //라운드키 저장
   unsigned long S[4][256]; //S-box
 } BF;
 
