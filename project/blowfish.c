@@ -1,66 +1,15 @@
-/*
-blowfish.c:  C implementation of the Blowfish algorithm.
+#include <stdio.h>
+#include <stdint.h>
 
-Copyright (C) 1997 by Paul Kocher
+typedef struct {
+  uint32_t P[16 + 2]; //Round Key
+  uint32_t S[4][256]; //S-box
+} BF;
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#define RN 16
 
-  
-	
-
-COMMENTS ON USING THIS CODE:
-
-Normal usage is as follows:
-   [1] Allocate a BLOWFISH_CTX.  (It may be too big for the stack.)
-   [2] Call Blowfish_Init with a pointer to your BLOWFISH_CTX, a pointer to
-       the key, and the number of bytes in the key.
-   [3] To encrypt a 64-bit block, call Blowfish_Encrypt with a pointer to
-       BLOWFISH_CTX, a pointer to the 32-bit left half of the plaintext
-	   and a pointer to the 32-bit right half.  The plaintext will be
-	   overwritten with the ciphertext.
-   [4] Decryption is the same as encryption except that the plaintext and
-       ciphertext are reversed.
-
-Warning #1:  The code does not check key lengths. (Caveat encryptor.) 
-Warning #2:  Beware that Blowfish keys repeat such that "ab" = "abab".
-Warning #3:  It is normally a good idea to zeroize the BLOWFISH_CTX before
-  freeing it.
-Warning #4:  Endianness conversions are the responsibility of the caller.
-  (To encrypt bytes on a little-endian platforms, you'll probably want
-  to swap bytes around instead of just casting.)
-Warning #5:  Make sure to use a reasonable mode of operation for your
-  application.  (If you don't know what CBC mode is, see Warning #7.)
-Warning #6:  This code is susceptible to timing attacks.
-Warning #7:  Security engineering is risky and non-intuitive.  Have someone 
-  check your work.  If you don't know what you are doing, get help.
-
-
-This is code is fast enough for most applications, but is not optimized for
-speed.
-
-If you require this code under a license other than LGPL, please ask.  (I 
-can be located using your favorite search engine.)  Unfortunately, I do not 
-have time to provide unpaid support for everyone who uses this code.  
-
-                                             -- Paul Kocher
-*/
-
-
-#include "blowfish.h"
-
-#define N               16
-
-static const unsigned long ORIG_P[16 + 2] = {
+static const uint32_t o_p[16 + 2] = 
+{
         0x243F6A88L, 0x85A308D3L, 0x13198A2EL, 0x03707344L,
         0xA4093822L, 0x299F31D0L, 0x082EFA98L, 0xEC4E6C89L,
         0x452821E6L, 0x38D01377L, 0xBE5466CFL, 0x34E90C6CL,
@@ -68,7 +17,8 @@ static const unsigned long ORIG_P[16 + 2] = {
         0x9216D5D9L, 0x8979FB1BL
 };
 
-static const unsigned long ORIG_S[4][256] = {
+static const uint32_t o_s[4][256] = 
+{
     {   0xD1310BA6L, 0x98DFB5ACL, 0x2FFD72DBL, 0xD01ADFB7L,
         0xB8E1AFEDL, 0x6A267E96L, 0xBA7C9045L, 0xF12C7F99L,
         0x24A19947L, 0xB3916CF7L, 0x0801F2E2L, 0x858EFC16L,
@@ -327,125 +277,207 @@ static const unsigned long ORIG_S[4][256] = {
         0xB74E6132L, 0xCE77E25BL, 0x578FDFE3L, 0x3AC372E6L  }
 };
 
+/***************************************************
+ * F function
+ * 
+ * ctx : BF struct
+ * x : 32-bit input
+ * 
+ * return : 32-bit output
+ ***************************************************/
+static uint32_t BF_F(BF *ctx, uint32_t x) 
+{
+   unsigned short s1, s2, s3, s4;
+   uint32_t  y;
 
-static unsigned long F(BLOWFISH_CTX *ctx, unsigned long x) {
-   unsigned short a, b, c, d;
-   unsigned long  y;
+   // step 1: Divide x into 8-bit segments s1, s2, s3, and s4.
+   s4 = (unsigned short)(x & 0xFF); // Extract the lowest 8 bits
+   x >>= 8;
+   s3 = (unsigned short)(x & 0xFF); // Extract the next 8 bits
+   x >>= 8;
+   s2 = (unsigned short)(x & 0xFF); // Extract the next 8 bits
+   x >>= 8;
+   s1 = (unsigned short)(x & 0xFF); // Extract the highest 8 bits
 
-   d = (unsigned short)(x & 0xFF);
-   x >>= 8;
-   c = (unsigned short)(x & 0xFF);
-   x >>= 8;
-   b = (unsigned short)(x & 0xFF);
-   x >>= 8;
-   a = (unsigned short)(x & 0xFF);
-   y = ctx->S[0][a] + ctx->S[1][b];
-   y = y ^ ctx->S[2][c];
-   y = y + ctx->S[3][d];
+   // step 2: Put s1, s2, s3, s4 into the S-box and get y.
+   y = ctx->S[0][s1] + ctx->S[1][s2];
+   y = y ^ ctx->S[2][s3];
+   y = y + ctx->S[3][s4];
 
    return y;
 }
 
+/*****************************************************
+ * Encryption Function
+ * 
+ * ctx : BF struct
+ * pt : plain text
+ * ct : cipher text
+ *****************************************************/
+void Blowfish_Enc(BF *ctx, uint32_t *pt, uint32_t *ct)
+{
+    uint32_t  left; // left 32-bit
+    uint32_t  right; // right 32-bit
+    uint32_t  temp;
 
-void Blowfish_Encrypt(BLOWFISH_CTX *ctx, unsigned long *xl, unsigned long *xr){
-  unsigned long  Xl;
-  unsigned long  Xr;
-  unsigned long  temp;
-  short       i;
+    left = pt[0]; // store x_l in left
+    right = pt[1]; // store x_r in right
 
-  Xl = *xl;
-  Xr = *xr;
-
-  for (i = 0; i < N; ++i) {
-    Xl = Xl ^ ctx->P[i];
-    Xr = F(ctx, Xl) ^ Xr;
-
-    temp = Xl;
-    Xl = Xr;
-    Xr = temp;
-  }
-
-  temp = Xl;
-  Xl = Xr;
-  Xr = temp;
-
-  Xr = Xr ^ ctx->P[N];
-  Xl = Xl ^ ctx->P[N + 1];
-
-  *xl = Xl;
-  *xr = Xr;
+    for (int i = 0; i < RN; ++i) {
+        // step 1: Perform XOR between left and i-th element of P-array
+        left = left ^ ctx->P[i];
+        
+        // step 2: Put the result of step 1 into the Blowfish F function
+        // step 3: Perform XOR between the result of step 2 and right
+        //         Store the result of step 3 in right
+        right = BF_F(ctx, left) ^ right;
+        
+        // step 4: Swap left and right
+        temp = left;
+        left = right;
+        right = temp;
+    } // step 5: Repeat RN times (16 times)
+    
+    // step 6: Swap left and right
+    temp = left;
+    left = right;
+    right = temp;
+    
+    // step 7: Perform XOR between right and 17-th element of P-array
+    //         Store the result of step 7 in right
+    right = right ^ ctx->P[RN];
+    
+    // step 8: Perform XOR between left and 18-th element of P-array
+    //         Store the result of step 8 in left
+    left = left ^ ctx->P[RN + 1];
+    
+    // store left and right in x_l and x_r
+    ct[0] = left;
+    ct[1] = right;
 }
 
-
-void Blowfish_Decrypt(BLOWFISH_CTX *ctx, unsigned long *xl, unsigned long *xr){
-  unsigned long  Xl;
-  unsigned long  Xr;
-  unsigned long  temp;
-  short       i;
-
-  Xl = *xl;
-  Xr = *xr;
-
-  for (i = N + 1; i > 1; --i) {
-    Xl = Xl ^ ctx->P[i];
-    Xr = F(ctx, Xl) ^ Xr;
-
-    /* Exchange Xl and Xr */
-    temp = Xl;
-    Xl = Xr;
-    Xr = temp;
-  }
-
-  /* Exchange Xl and Xr */
-  temp = Xl;
-  Xl = Xr;
-  Xr = temp;
-
-  Xr = Xr ^ ctx->P[1];
-  Xl = Xl ^ ctx->P[0];
-
-  *xl = Xl;
-  *xr = Xr;
+/*****************************************************
+ * Decryption Function
+ * 
+ * ctx : BF struct
+ * ct : cipher text
+ * dt : decrypted text
+ *****************************************************/
+void Blowfish_Dec(BF *ctx, uint32_t *ct, uint32_t *dt)
+{
+    uint32_t  left; // left 32-bit
+    uint32_t  right; // right 32-bit
+    uint32_t  temp;
+    
+    left = ct[0]; // store x_l in left
+    right = ct[1]; // store x_r in right
+    
+    for (int i = RN + 1; i > 1; --i) {
+        // step 1: Perform XOR between left and i-th element of P-array
+        left = left ^ ctx->P[i];
+        
+        // step 2: Put the result of step 1 into the Blowfish F function
+        // step 3: Perform XOR between the result of step 2 and right
+        //         Store the result of step 3 in right
+        right = BF_F(ctx, left) ^ right;
+        
+        // step 4: Swap left and right
+        temp = left;
+        left = right;
+        right = temp;
+    } // step 5: Repeat RN times (16 times)
+    
+    // step 6: Swap left and right
+    temp = left;
+    left = right;
+    right = temp;
+    
+    // step 7: Perform XOR between right and 17-th element of P-array
+    //         Store the result of step 7 in right
+    right = right ^ ctx->P[1];
+    
+    // step 8: Perform XOR between left and 18-th element of P-array
+    //         Store the result of step 8 in left
+    left = left ^ ctx->P[0];
+    
+    // store left and right in x_l and x_r
+    dt[0] = left;
+    dt[1] = right;
 }
 
-
-void Blowfish_Init(BLOWFISH_CTX *ctx, unsigned char *key, int keyLen) {
-  int i, j, k;
-  unsigned long data, datal, datar;
-
-  for (i = 0; i < 4; i++) {
-    for (j = 0; j < 256; j++)
-      ctx->S[i][j] = ORIG_S[i][j];
-  }
-
-  j = 0;
-  for (i = 0; i < N + 2; ++i) {
-    data = 0x00000000;
-    for (k = 0; k < 4; ++k) {
-      data = (data << 8) | key[j];
-      j = j + 1;
-      if (j >= keyLen)
-        j = 0;
+/*****************************************************
+ * Initiation Function
+ * 
+ * ctx : BF struct
+ * key : user's key
+ * keyLen : key's length
+ *****************************************************/
+void Blowfish_Init(BF *ctx, unsigned char *key, int keyLen)
+{
+    int i, j, k;
+    uint32_t input; 
+    uint32_t init[2]={0x00000000, 0x00000000};
+    
+    // Initialize S-boxes
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < 256; j++)
+        ctx->S[i][j] = o_s[i][j];
     }
-    ctx->P[i] = ORIG_P[i] ^ data;
-  }
 
-  datal = 0x00000000;
-  datar = 0x00000000;
-
-  for (i = 0; i < N + 2; i += 2) {
-    Blowfish_Encrypt(ctx, &datal, &datar);
-    ctx->P[i] = datal;
-    ctx->P[i + 1] = datar;
-  }
-
-  for (i = 0; i < 4; ++i) {
-    for (j = 0; j < 256; j += 2) {
-      Blowfish_Encrypt(ctx, &datal, &datar);
-      ctx->S[i][j] = datal;
-      ctx->S[i][j + 1] = datar;
+    // Initialize P-array
+    j = 0;
+    for (i = 0; i < RN + 2; ++i) {
+        input = 0x00000000; // 32-bit initialization key to used for each block
+        
+        // Divide the key into 4-byte blocks to create a round key
+        for (k = 0; k < 4; ++k) {
+            input = (input << 8) | key[j]; //get 8-bit of key and store in input
+            j = j + 1;
+            // if exceed the length of key, start from the beginning
+            if (j >= keyLen) j = 0;
+        }
+        // Store the result of XOR operation between o_p and input in P-array
+        ctx->P[i] = o_p[i] ^ input;
     }
-  }
+    
+    // Shuffle the P-array using the Blowfish algorithm
+    for (i = 0; i < RN + 2; i += 2) {
+        Blowfish_Enc(ctx, init, init);
+        ctx->P[i] = init[0];
+        ctx->P[i + 1] = init[1];
+    }
+    
+    // Shuffle the S-boxes using the Blowfish algorithm
+    for (i = 0; i < 4; ++i) {
+        for (j = 0; j < 256; j += 2) {
+            Blowfish_Enc(ctx, init, init);
+            ctx->S[i][j] = init[0];
+            ctx->S[i][j + 1] = init[1];
+        }
+    }
 }
 
+int main() {
+    uint32_t text[2] = {0xffffffffL, 0xffffffffL}; // plain text
+    printf("%08lX %08lX\n", text[0], text[1]);
 
+    BF ctx; // BF struct
+
+    unsigned char key[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}; // user's key
+    
+    uint32_t enc_text[2]; // cipher text
+    uint32_t dec_text[2]; // decrypted text
+
+    Blowfish_Init(&ctx, key, 8); // Initiation
+    
+    // Encryption test
+    Blowfish_Enc(&ctx, text, enc_text);
+    printf("%08lX %08lX\n", enc_text[0], enc_text[1]); 
+    if (enc_text[0] == 0x51866FD5L && enc_text[1] == 0xB85ECB8AL) printf("good!\n");
+    else printf("???\n");
+    
+    // Decryption test
+    Blowfish_Dec(&ctx, enc_text, dec_text);
+    if (dec_text[0] == 0xffffffff && dec_text[1] == 0xffffffff) printf("good!\n");
+    else printf("???\n");
+}

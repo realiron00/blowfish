@@ -382,7 +382,8 @@ void Blowfish_Dec(BF *ctx, uint32_t *ct, uint32_t *dt)
 }
 
 // Blowfish Initialization function
-void Blowfish_Init(BF *ctx, unsigned char *key, int keyLen) {
+void Blowfish_Init(BF *ctx, unsigned char *key, int keyLen) 
+{
     int i, j, k;
     uint32_t input; 
     uint32_t init[2]={0x00000000, 0x00000000};
