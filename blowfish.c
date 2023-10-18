@@ -3,7 +3,7 @@
 
 #define RN 16
 
-static const unsigned long o_p[16 + 2] = 
+static const uint32_t o_p[16 + 2] = 
 {
         0x243F6A88L, 0x85A308D3L, 0x13198A2EL, 0x03707344L,
         0xA4093822L, 0x299F31D0L, 0x082EFA98L, 0xEC4E6C89L,
@@ -12,7 +12,7 @@ static const unsigned long o_p[16 + 2] =
         0x9216D5D9L, 0x8979FB1BL
 };
 
-static const unsigned long o_s[4][256] = 
+static const uint32_t o_s[4][256] = 
 {
     {   0xD1310BA6L, 0x98DFB5ACL, 0x2FFD72DBL, 0xD01ADFB7L,
         0xB8E1AFEDL, 0x6A267E96L, 0xBA7C9045L, 0xF12C7F99L,
@@ -273,10 +273,10 @@ static const unsigned long o_s[4][256] =
 };
 
 // Blowfish F function
-static unsigned long BF_F(BF *ctx, unsigned long x) 
+static uint32_t BF_F(BF *ctx, uint32_t x) 
 {
    unsigned short s1, s2, s3, s4;
-   unsigned long  y;
+   uint32_t  y;
 
    // step 1: Divide x into 8-bit segments s1, s2, s3, and s4.
    s4 = (unsigned short)(x & 0xFF); // Extract the lowest 8 bits
@@ -296,11 +296,11 @@ static unsigned long BF_F(BF *ctx, unsigned long x)
 }
 
 // Blowfish Encryption function
-void Blowfish_Enc(BF *ctx, unsigned long *x_l, unsigned long *x_r)
+void Blowfish_Enc(BF *ctx, uint32_t *x_l, uint32_t *x_r)
 {
-    unsigned long  left; // left 32-bit
-    unsigned long  right; // right 32-bit
-    unsigned long  temp;
+    uint32_t  left; // left 32-bit
+    uint32_t  right; // right 32-bit
+    uint32_t  temp;
     
     left = *x_l; // store x_l in left
     right = *x_r; // store x_r in right
@@ -339,11 +339,11 @@ void Blowfish_Enc(BF *ctx, unsigned long *x_l, unsigned long *x_r)
 }
 
 // Blowfish Decryption function
-void Blowfish_Dec(BF *ctx, unsigned long *x_l, unsigned long *x_r)
+void Blowfish_Dec(BF *ctx, uint32_t *x_l, uint32_t *x_r)
 {
-    unsigned long  left; // left 32-bit
-    unsigned long  right; // right 32-bit
-    unsigned long  temp;
+    uint32_t  left; // left 32-bit
+    uint32_t  right; // right 32-bit
+    uint32_t  temp;
     
     left = *x_l; // store x_l in left
     right = *x_r; // store x_r in right
@@ -384,7 +384,7 @@ void Blowfish_Dec(BF *ctx, unsigned long *x_l, unsigned long *x_r)
 // Blowfish Initialization function
 void Blowfish_Init(BF *ctx, unsigned char *key, int keyLen) {
     int i, j, k;
-    unsigned long input, left, right;
+    uint32_t input, left, right;
     
     // Initialize S-boxes
     for (i = 0; i < 4; i++) {

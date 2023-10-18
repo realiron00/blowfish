@@ -3,9 +3,10 @@
 
 //blowfish test
 int main(void) {
-    unsigned long plain[2] = {0xffffffff, 0xffffffff};
+    uint32_t plain[2] = {0xffffffff, 0xffffffff};
     BF ctx;
     unsigned char key[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    uint32_t cipher[2] = {0x00, };
     Blowfish_Init(&ctx, key, 8);
     Blowfish_Enc(&ctx, &plain[0], &plain[1]);
     printf("%08lX %08lX\n", plain[0], plain[1]);

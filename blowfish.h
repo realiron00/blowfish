@@ -1,8 +1,9 @@
 //Blowfish.h
+#include <stdint.h>
 
 typedef struct {
-  unsigned long P[16 + 2]; //Round Key
-  unsigned long S[4][256]; //S-box
+  uint32_t P[16 + 2]; //Round Key
+  uint32_t S[4][256]; //S-box
 } BF;
 
 /*****************************************************
@@ -21,7 +22,7 @@ void Blowfish_Init(BF *ctx, unsigned char *key, int keyLen);
  * xl : left plain text
  * xr : right plain text
  *****************************************************/
-void Blowfish_Enc(BF *ctx, unsigned long *xl, unsigned long *xr);
+void Blowfish_Enc(BF *ctx, uint32_t *xl, uint32_t *xr);
 
 /*****************************************************
  * Decryption Function
@@ -30,4 +31,4 @@ void Blowfish_Enc(BF *ctx, unsigned long *xl, unsigned long *xr);
  * xl : left cipher text
  * xr : right cipher text
  *****************************************************/
-void Blowfish_Dec(BF *ctx, unsigned long *xl, unsigned long *xr);
+void Blowfish_Dec(BF *ctx, uint32_t *xl, uint32_t *xr);
