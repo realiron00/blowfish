@@ -296,15 +296,15 @@ static uint32_t BF_F(BF *ctx, uint32_t x)
 }
 
 // Blowfish Encryption function
-void Blowfish_Enc(BF *ctx, uint32_t *x_l, uint32_t *x_r)
+void Blowfish_Enc(BF *ctx, uint32_t *pt, uint32_t *ct)
 {
     uint32_t  left; // left 32-bit
     uint32_t  right; // right 32-bit
     uint32_t  temp;
-    
-    left = *x_l; // store x_l in left
-    right = *x_r; // store x_r in right
-    
+
+    left = pt[0]; // store x_l in left
+    right = pt[1]; // store x_r in right
+
     for (int i = 0; i < RN; ++i) {
         // step 1: Perform XOR between left and i-th element of P-array
         left = left ^ ctx->P[i];
@@ -334,19 +334,19 @@ void Blowfish_Enc(BF *ctx, uint32_t *x_l, uint32_t *x_r)
     left = left ^ ctx->P[RN + 1];
     
     // store left and right in x_l and x_r
-    *x_l = left;
-    *x_r = right;
+    ct[0] = left;
+    ct[1] = right;
 }
 
 // Blowfish Decryption function
-void Blowfish_Dec(BF *ctx, uint32_t *x_l, uint32_t *x_r)
+void Blowfish_Dec(BF *ctx, uint32_t *ct, uint32_t *dt)
 {
     uint32_t  left; // left 32-bit
     uint32_t  right; // right 32-bit
     uint32_t  temp;
     
-    left = *x_l; // store x_l in left
-    right = *x_r; // store x_r in right
+    left = ct[0]; // store x_l in left
+    right = ct[1]; // store x_r in right
     
     for (int i = RN + 1; i > 1; --i) {
         // step 1: Perform XOR between left and i-th element of P-array
@@ -377,14 +377,15 @@ void Blowfish_Dec(BF *ctx, uint32_t *x_l, uint32_t *x_r)
     left = left ^ ctx->P[0];
     
     // store left and right in x_l and x_r
-    *x_l = left;
-    *x_r = right;
+    dt[0] = left;
+    dt[1] = right;
 }
 
 // Blowfish Initialization function
 void Blowfish_Init(BF *ctx, unsigned char *key, int keyLen) {
     int i, j, k;
-    uint32_t input, left, right;
+    uint32_t input; 
+    uint32_t init[2]={0x00000000, 0x00000000};
     
     // Initialize S-boxes
     for (i = 0; i < 4; i++) {
@@ -408,22 +409,19 @@ void Blowfish_Init(BF *ctx, unsigned char *key, int keyLen) {
         ctx->P[i] = o_p[i] ^ input;
     }
     
-    left = 0x00000000;
-    right = 0x00000000;
-    
     // Shuffle the P-array using the Blowfish algorithm
     for (i = 0; i < RN + 2; i += 2) {
-        Blowfish_Enc(ctx, &left, &right);
-        ctx->P[i] = left;
-        ctx->P[i + 1] = right;
+        Blowfish_Enc(ctx, init, init);
+        ctx->P[i] = init[0];
+        ctx->P[i + 1] = init[1];
     }
     
     // Shuffle the S-boxes using the Blowfish algorithm
     for (i = 0; i < 4; ++i) {
         for (j = 0; j < 256; j += 2) {
-            Blowfish_Enc(ctx, &left, &right);
-            ctx->S[i][j] = left;
-            ctx->S[i][j + 1] = right;
+            Blowfish_Enc(ctx, init, init);
+            ctx->S[i][j] = init[0];
+            ctx->S[i][j + 1] = init[1];
         }
     }
 }

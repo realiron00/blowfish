@@ -1,4 +1,5 @@
 //Blowfish.h
+#include <stdio.h>
 #include <stdint.h>
 
 typedef struct {
@@ -19,16 +20,16 @@ void Blowfish_Init(BF *ctx, unsigned char *key, int keyLen);
  * Encryption Function
  * 
  * ctx : BF struct
- * xl : left plain text
- * xr : right plain text
+ * pt : plain text
+ * ct : cipher text
  *****************************************************/
-void Blowfish_Enc(BF *ctx, uint32_t *xl, uint32_t *xr);
+void Blowfish_Enc(BF *ctx, uint32_t *pt, uint32_t *ct);
 
 /*****************************************************
  * Decryption Function
  * 
  * ctx : BF struct
- * xl : left cipher text
- * xr : right cipher text
+ * ct : cipher text
+ * dt : decrypted text
  *****************************************************/
-void Blowfish_Dec(BF *ctx, uint32_t *xl, uint32_t *xr);
+void Blowfish_Dec(BF *ctx, uint32_t *ct, uint32_t *dt);

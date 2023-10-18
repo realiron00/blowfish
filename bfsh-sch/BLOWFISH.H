@@ -1,8 +1,35 @@
-#define MAXKEYBYTES 56          /* 448 bits */
-// #define little_endian 1              /* Eg: Intel */
-#define big_endian 1            /* Eg: Motorola */
+//Blowfish.h
+#include <stdint.h>
+#include <stdio.h>
 
-short opensubkeyfile(void);
-unsigned long F(unsigned long x);
-void Blowfish_encipher(unsigned long *xl, unsigned long *xr);
-void Blowfish_decipher(unsigned long *xl, unsigned long *xr);
+typedef struct {
+  uint32_t P[16 + 2]; //Round Key
+  uint32_t S[4][256]; //S-box
+} BF;
+
+/*****************************************************
+ * Initiation Function
+ * 
+ * ctx : BF struct
+ * key : user's key
+ * keyLen : key's length
+ *****************************************************/
+void Blowfish_Init(BF *ctx, unsigned char *key, int keyLen);
+
+/*****************************************************
+ * Encryption Function
+ * 
+ * ctx : BF struct
+ * xl : left plain text
+ * xr : right plain text
+ *****************************************************/
+void Blowfish_Enc(BF *ctx, uint32_t *xl, uint32_t *xr);
+
+/*****************************************************
+ * Decryption Function
+ * 
+ * ctx : BF struct
+ * xl : left cipher text
+ * xr : right cipher text
+ *****************************************************/
+void Blowfish_Dec(BF *ctx, uint32_t *xl, uint32_t *xr);
