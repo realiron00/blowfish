@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "blowfish.h"
 
-//blowfish 테스트
+//blowfish test
 int main(void) {
     unsigned long plain[2] = {0xffffffff, 0xffffffff};
     BF ctx;

@@ -1,4 +1,4 @@
-//Blowfish encryption algorithm
+// Blowfish encryption algorithm
 #include "blowfish.h"
 
 #define RN 16
@@ -278,16 +278,16 @@ static unsigned long BF_F(BF *ctx, unsigned long x)
    unsigned short s1, s2, s3, s4;
    unsigned long  y;
 
-   //step 1: x를 8비트씩 나누어 s1, s2, s3, s4에 저장
-   s4 = (unsigned short)(x & 0xFF); //가장 낮은 8비트 추출
+   // step 1: Divide x into 8-bit segments s1, s2, s3, and s4.
+   s4 = (unsigned short)(x & 0xFF); // Extract the lowest 8 bits
    x >>= 8;
-   s3 = (unsigned short)(x & 0xFF); //그 다음 8비트 추출
+   s3 = (unsigned short)(x & 0xFF); // Extract the next 8 bits
    x >>= 8;
-   s2 = (unsigned short)(x & 0xFF); //그 다음 8비트 추출
+   s2 = (unsigned short)(x & 0xFF); // Extract the next 8 bits
    x >>= 8;
-   s1 = (unsigned short)(x & 0xFF); //가장 높은 8비트 추출
+   s1 = (unsigned short)(x & 0xFF); // Extract the highest 8 bits
 
-   //step 2: s1, s2, s3, s4를 Blowfish S-box에 넣어서 y를 구함
+   // step 2: Put s1, s2, s3, s4 into the S-box and get y.
    y = ctx->S[0][s1] + ctx->S[1][s2];
    y = y ^ ctx->S[2][s3];
    y = y + ctx->S[3][s4];
@@ -295,124 +295,130 @@ static unsigned long BF_F(BF *ctx, unsigned long x)
    return y;
 }
 
-// Blowfish 암호화 함수
+// Blowfish Encryption function
 void Blowfish_Enc(BF *ctx, unsigned long *x_l, unsigned long *x_r)
 {
-    unsigned long  left; //left 32-bit
-    unsigned long  right; //right 32-bit
+    unsigned long  left; // left 32-bit
+    unsigned long  right; // right 32-bit
     unsigned long  temp;
     
-    left = *x_l; //left에 x_l 저장
-    right = *x_r; //right에 x_r 저장
+    left = *x_l; // store x_l in left
+    right = *x_r; // store x_r in right
     
     for (int i = 0; i < RN; ++i) {
-        //step 1: left와 P-array의 i번째 구성요소를 XOR 연산
+        // step 1: Perform XOR between left and i-th element of P-array
         left = left ^ ctx->P[i];
         
-        //step 2: step 1의 결과를 Blowfish F 함수에 넣어서 결과를 구함
-        //step 3: step 2의 결과와 right를 XOR 연산
+        // step 2: Put the result of step 1 into the Blowfish F function
+        // step 3: Perform XOR between the result of step 2 and right
+        //         Store the result of step 3 in right
         right = BF_F(ctx, left) ^ right;
         
-        //step 4: left와 right를 서로 바꿈
+        // step 4: Swap left and right
         temp = left;
         left = right;
         right = temp;
-    } //step 5: step 4를 RN번(16번) 반복
+    } // step 5: Repeat RN times (16 times)
     
-    //step 6: left와 right를 서로 바꿈
+    // step 6: Swap left and right
     temp = left;
     left = right;
     right = temp;
     
-    //step 7: 우측 연산 값을 P 17번째 원소와 XOR 연산하고 우측에 저장
+    // step 7: Perform XOR between right and 17-th element of P-array
+    //         Store the result of step 7 in right
     right = right ^ ctx->P[RN];
     
-    //step 8: 좌측 연산 값을 P 18번째 원소와 XOR 연산하고 좌측에 저장
+    // step 8: Perform XOR between left and 18-th element of P-array
+    //         Store the result of step 8 in left
     left = left ^ ctx->P[RN + 1];
     
-    //left와 right를 x_l과 x_r에 저장
+    // store left and right in x_l and x_r
     *x_l = left;
     *x_r = right;
 }
 
-// Blowfish 복호화 함수
+// Blowfish Decryption function
 void Blowfish_Dec(BF *ctx, unsigned long *x_l, unsigned long *x_r)
 {
-    unsigned long  left; //left 32-bit
-    unsigned long  right; //right 32-bit
+    unsigned long  left; // left 32-bit
+    unsigned long  right; // right 32-bit
     unsigned long  temp;
     
-    left = *x_l; //left에 x_l 저장
-    right = *x_r; //right에 x_r 저장
+    left = *x_l; // store x_l in left
+    right = *x_r; // store x_r in right
     
     for (int i = RN + 1; i > 1; --i) {
-        //step 1: left와 P-array의 i번째 구성요소를 XOR 연산
+        // step 1: Perform XOR between left and i-th element of P-array
         left = left ^ ctx->P[i];
         
-        //step 2: step 1의 결과를 Blowfish F 함수에 넣어서 결과를 구함
-        //step 3: step 2의 결과와 right를 XOR 연산
+        // step 2: Put the result of step 1 into the Blowfish F function
+        // step 3: Perform XOR between the result of step 2 and right
+        //         Store the result of step 3 in right
         right = BF_F(ctx, left) ^ right;
         
-        //step 4: left와 right를 서로 바꿈
+        // step 4: Swap left and right
         temp = left;
         left = right;
         right = temp;
-    } //step 5: step 4를 RN번(16번) 반복
+    } // step 5: Repeat RN times (16 times)
     
-    //step 6: left와 right를 서로 바꿈
+    // step 6: Swap left and right
     temp = left;
     left = right;
     right = temp;
     
-    //step 7: 우측 연산 값을 P 17번째 원소와 XOR 연산하고 우측에 저장
+    // step 7: Perform XOR between right and 17-th element of P-array
+    //         Store the result of step 7 in right
     right = right ^ ctx->P[1];
     
-    //step 8: 좌측 연산 값을 P 18번째 원소와 XOR 연산하고 좌측에 저장
+    // step 8: Perform XOR between left and 18-th element of P-array
+    //         Store the result of step 8 in left
     left = left ^ ctx->P[0];
     
-    //left와 right를 x_l과 x_r에 저장
+    // store left and right in x_l and x_r
     *x_l = left;
     *x_r = right;
 }
 
-// Blowfish 초기화 함수
+// Blowfish Initialization function
 void Blowfish_Init(BF *ctx, unsigned char *key, int keyLen) {
     int i, j, k;
     unsigned long input, left, right;
     
-    // S-box 초기화
+    // Initialize S-boxes
     for (i = 0; i < 4; i++) {
         for (j = 0; j < 256; j++)
         ctx->S[i][j] = o_s[i][j];
     }
 
-    // P-array 초기화
+    // Initialize P-array
     j = 0;
     for (i = 0; i < RN + 2; ++i) {
-        input = 0x00000000; //각 블록마다 사용할 32비트 초기화 키
+        input = 0x00000000; // 32-bit initialization key to used for each block
         
-        //key를 4바이트씩 나누어 라운드 키 생성
+        // Divide the key into 4-byte blocks to create a round key
         for (k = 0; k < 4; ++k) {
-            input = (input << 8) | key[j]; //키를 가져와서 input에 저장
+            input = (input << 8) | key[j]; //get 8-bit of key and store in input
             j = j + 1;
-            //키 배열을 넘어가면 처음부터 다시 시작
+            // if exceed the length of key, start from the beginning
             if (j >= keyLen) j = 0;
         }
-        //o_p배열과 XOR 연산을 하여 P-array에 저장
+        // Store the result of XOR operation between o_p and input in P-array
         ctx->P[i] = o_p[i] ^ input;
     }
     
     left = 0x00000000;
     right = 0x00000000;
     
-    // P-array 값 셔플링
+    // Shuffle the P-array using the Blowfish algorithm
     for (i = 0; i < RN + 2; i += 2) {
         Blowfish_Enc(ctx, &left, &right);
         ctx->P[i] = left;
         ctx->P[i + 1] = right;
     }
     
-    // S-box 값 셔플링
+    // Shuffle the S-boxes using the Blowfish algorithm
     for (i = 0; i < 4; ++i) {
         for (j = 0; j < 256; j += 2) {
             Blowfish_Enc(ctx, &left, &right);
