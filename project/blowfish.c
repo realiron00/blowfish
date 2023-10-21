@@ -8,7 +8,7 @@ typedef struct {
 
 #define RN 16
 
-static const uint32_t o_p[16 + 2] = 
+const uint32_t o_p[16 + 2] = 
 {
         0x243F6A88L, 0x85A308D3L, 0x13198A2EL, 0x03707344L,
         0xA4093822L, 0x299F31D0L, 0x082EFA98L, 0xEC4E6C89L,
@@ -17,7 +17,7 @@ static const uint32_t o_p[16 + 2] =
         0x9216D5D9L, 0x8979FB1BL
 };
 
-static const uint32_t o_s[4][256] = 
+const uint32_t o_s[4][256] = 
 {
     {   0xD1310BA6L, 0x98DFB5ACL, 0x2FFD72DBL, 0xD01ADFB7L,
         0xB8E1AFEDL, 0x6A267E96L, 0xBA7C9045L, 0xF12C7F99L,
