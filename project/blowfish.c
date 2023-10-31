@@ -1,12 +1,10 @@
 #include <stdio.h>
 #include <stdint.h>
 
-typedef struct {
-  uint32_t P[16 + 2]; //Round Key
-  uint32_t S[4][256]; //S-box
-} BF;
-
 #define RN 16
+
+uint32_t NP[16+2];
+uint32_t NS[4][256];
 
 const uint32_t o_p[16 + 2] = 
 {
@@ -285,7 +283,7 @@ const uint32_t o_s[4][256] =
  * 
  * return : 32-bit output
  ***************************************************/
-static uint32_t BF_F(BF *ctx, uint32_t x) 
+static uint32_t BF_F(uint32_t (*s)[256], uint32_t x) 
 {
    unsigned short s1, s2, s3, s4;
    uint32_t  y;
@@ -300,9 +298,9 @@ static uint32_t BF_F(BF *ctx, uint32_t x)
    s1 = (unsigned short)(x & 0xFF); // Extract the highest 8 bits
 
    // step 2: Put s1, s2, s3, s4 into the S-box and get y.
-   y = ctx->S[0][s1] + ctx->S[1][s2];
-   y = y ^ ctx->S[2][s3];
-   y = y + ctx->S[3][s4];
+   y = s[0][s1] + s[1][s2];
+   y = y ^ s[2][s3];
+   y = y + s[3][s4];
 
    return y;
 }
@@ -314,7 +312,7 @@ static uint32_t BF_F(BF *ctx, uint32_t x)
  * pt : plain text
  * ct : cipher text
  *****************************************************/
-void Blowfish_Enc(BF *ctx, uint32_t *pt, uint32_t *ct)
+void Blowfish_Enc(uint32_t *p, uint32_t (*s)[256], uint32_t *pt, uint32_t *ct)
 {
     uint32_t  left; // left 32-bit
     uint32_t  right; // right 32-bit
@@ -325,12 +323,12 @@ void Blowfish_Enc(BF *ctx, uint32_t *pt, uint32_t *ct)
 
     for (int i = 0; i < RN; ++i) {
         // step 1: Perform XOR between left and i-th element of P-array
-        left = left ^ ctx->P[i];
+        left = left ^ p[i];
         
         // step 2: Put the result of step 1 into the Blowfish F function
         // step 3: Perform XOR between the result of step 2 and right
         //         Store the result of step 3 in right
-        right = BF_F(ctx, left) ^ right;
+        right = BF_F(s, left) ^ right;
         
         // step 4: Swap left and right
         temp = left;
@@ -345,11 +343,11 @@ void Blowfish_Enc(BF *ctx, uint32_t *pt, uint32_t *ct)
     
     // step 7: Perform XOR between right and 17-th element of P-array
     //         Store the result of step 7 in right
-    right = right ^ ctx->P[RN];
+    right = right ^ p[RN];
     
     // step 8: Perform XOR between left and 18-th element of P-array
     //         Store the result of step 8 in left
-    left = left ^ ctx->P[RN + 1];
+    left = left ^ p[RN + 1];
     
     // store left and right in x_l and x_r
     ct[0] = left;
@@ -363,7 +361,7 @@ void Blowfish_Enc(BF *ctx, uint32_t *pt, uint32_t *ct)
  * ct : cipher text
  * dt : decrypted text
  *****************************************************/
-void Blowfish_Dec(BF *ctx, uint32_t *ct, uint32_t *dt)
+void Blowfish_Dec(uint32_t *p, uint32_t (*s)[256], uint32_t *ct, uint32_t *dt)
 {
     uint32_t  left; // left 32-bit
     uint32_t  right; // right 32-bit
@@ -374,12 +372,12 @@ void Blowfish_Dec(BF *ctx, uint32_t *ct, uint32_t *dt)
     
     for (int i = RN + 1; i > 1; --i) {
         // step 1: Perform XOR between left and i-th element of P-array
-        left = left ^ ctx->P[i];
+        left = left ^ p[i];
         
         // step 2: Put the result of step 1 into the Blowfish F function
         // step 3: Perform XOR between the result of step 2 and right
         //         Store the result of step 3 in right
-        right = BF_F(ctx, left) ^ right;
+        right = BF_F(s, left) ^ right;
         
         // step 4: Swap left and right
         temp = left;
@@ -394,11 +392,11 @@ void Blowfish_Dec(BF *ctx, uint32_t *ct, uint32_t *dt)
     
     // step 7: Perform XOR between right and 17-th element of P-array
     //         Store the result of step 7 in right
-    right = right ^ ctx->P[1];
+    right = right ^ p[1];
     
     // step 8: Perform XOR between left and 18-th element of P-array
     //         Store the result of step 8 in left
-    left = left ^ ctx->P[0];
+    left = left ^ p[0];
     
     // store left and right in x_l and x_r
     dt[0] = left;
@@ -412,7 +410,7 @@ void Blowfish_Dec(BF *ctx, uint32_t *ct, uint32_t *dt)
  * key : user's key
  * keyLen : key's length
  *****************************************************/
-void Blowfish_Init(BF *ctx, unsigned char *key, int keyLen)
+void Blowfish_Init(uint32_t *p, uint32_t (*s)[256], unsigned char *key, int keyLen)
 {
     int i, j, k;
     uint32_t input; 
@@ -421,7 +419,7 @@ void Blowfish_Init(BF *ctx, unsigned char *key, int keyLen)
     // Initialize S-boxes
     for (i = 0; i < 4; i++) {
         for (j = 0; j < 256; j++)
-        ctx->S[i][j] = o_s[i][j];
+        s[i][j] = o_s[i][j];
     }
 
     // Initialize P-array
@@ -437,22 +435,22 @@ void Blowfish_Init(BF *ctx, unsigned char *key, int keyLen)
             if (j >= keyLen) j = 0;
         }
         // Store the result of XOR operation between o_p and input in P-array
-        ctx->P[i] = o_p[i] ^ input;
+        p[i] = o_p[i] ^ input;
     }
     
     // Shuffle the P-array using the Blowfish algorithm
     for (i = 0; i < RN + 2; i += 2) {
-        Blowfish_Enc(ctx, init, init);
-        ctx->P[i] = init[0];
-        ctx->P[i + 1] = init[1];
+        Blowfish_Enc(p, s, init, init);
+        p[i] = init[0];
+        p[i + 1] = init[1];
     }
     
     // Shuffle the S-boxes using the Blowfish algorithm
     for (i = 0; i < 4; ++i) {
         for (j = 0; j < 256; j += 2) {
-            Blowfish_Enc(ctx, init, init);
-            ctx->S[i][j] = init[0];
-            ctx->S[i][j + 1] = init[1];
+            Blowfish_Enc(p, s, init, init);
+            s[i][j] = init[0];
+            s[i][j + 1] = init[1];
         }
     }
 }
@@ -461,23 +459,21 @@ int main() {
     uint32_t text[2] = {0xffffffffL, 0xffffffffL}; // plain text
     printf("%08lX %08lX\n", text[0], text[1]);
 
-    BF ctx; // BF struct
-
     unsigned char key[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}; // user's key
     
     uint32_t enc_text[2]; // cipher text
     uint32_t dec_text[2]; // decrypted text
 
-    Blowfish_Init(&ctx, key, 8); // Initiation
+    Blowfish_Init(NP, NS, key, 8); // Initiation
     
     // Encryption test
-    Blowfish_Enc(&ctx, text, enc_text);
+    Blowfish_Enc(NP, NS, text, enc_text);
     printf("%08lX %08lX\n", enc_text[0], enc_text[1]); 
     if (enc_text[0] == 0x51866FD5L && enc_text[1] == 0xB85ECB8AL) printf("good!\n");
     else printf("???\n");
     
     // Decryption test
-    Blowfish_Dec(&ctx, enc_text, dec_text);
+    Blowfish_Dec(NP, NS, enc_text, dec_text);
     if (dec_text[0] == 0xffffffff && dec_text[1] == 0xffffffff) printf("good!\n");
     else printf("???\n");
 }
